@@ -30,13 +30,13 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	aflag "k8s.io/component-base/cli/flag"
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/component-base/logs"
-	kubeschedulerconfigv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
+	kubeschedulerconfigv1alpha1 "k8s.io/kube-scheduler/config/v1alpha1"
 	schedconfig "k8s.io/kubernetes/cmd/kube-scheduler/app/config"
 	schedoptions "k8s.io/kubernetes/cmd/kube-scheduler/app/options"
 	_ "k8s.io/kubernetes/pkg/scheduler/algorithmprovider"
 	kubeschedulerconfig "k8s.io/kubernetes/pkg/scheduler/apis/config"
 	kubeschedulerscheme "k8s.io/kubernetes/pkg/scheduler/apis/config/scheme"
+	utilpointer "k8s.io/utils/pointer"
 
 	"sigs.k8s.io/cluster-capacity/cmd/cluster-capacity/app/options"
 	"sigs.k8s.io/cluster-capacity/pkg/framework"
@@ -97,8 +97,10 @@ func Validate(opt *options.ClusterCapacityOptions) error {
 func Run(opt *options.ClusterCapacityOptions) error {
 	conf := options.NewClusterCapacityConfig(opt)
 
-	versionedCfg := kubeschedulerconfigv1beta1.KubeSchedulerConfiguration{}
-	versionedCfg.DebuggingConfiguration = *configv1alpha1.NewRecommendedDebuggingConfiguration()
+	versionedCfg := kubeschedulerconfigv1alpha1.KubeSchedulerConfiguration{}
+	versionedCfg.DebuggingConfiguration = configv1alpha1.DebuggingConfiguration{
+		EnableProfiling: utilpointer.BoolPtr(true), // profile debugging is cheap to have exposed and standard on kube binaries
+	}
 
 	kubeschedulerscheme.Scheme.Default(&versionedCfg)
 	kcfg := kubeschedulerconfig.KubeSchedulerConfiguration{}
@@ -107,18 +109,13 @@ func Run(opt *options.ClusterCapacityOptions) error {
 	}
 
 	// Always set the list of bind plugins to ClusterCapacityBinder
-	if len(kcfg.Profiles) == 0 {
-		kcfg.Profiles = []kubeschedulerconfig.KubeSchedulerProfile{
-			{},
-		}
+	kcfg.SchedulerName = v1.DefaultSchedulerName
+	if kcfg.Plugins == nil {
+		kcfg.Plugins = &kubeschedulerconfig.Plugins{}
 	}
 
-	kcfg.Profiles[0].SchedulerName = v1.DefaultSchedulerName
-	if kcfg.Profiles[0].Plugins == nil {
-		kcfg.Profiles[0].Plugins = &kubeschedulerconfig.Plugins{}
-	}
-
-	kcfg.Profiles[0].Plugins.Bind = &kubeschedulerconfig.PluginSet{
+	// TODO configurable plugins
+	kcfg.Plugins.Bind = &kubeschedulerconfig.PluginSet{
 		Enabled:  []kubeschedulerconfig.Plugin{{Name: "ClusterCapacityBinder"}},
 		Disabled: []kubeschedulerconfig.Plugin{{Name: "DefaultBinder"}},
 	}
@@ -126,7 +123,6 @@ func Run(opt *options.ClusterCapacityOptions) error {
 	opts := &schedoptions.Options{
 		ComponentConfig: kcfg,
 		ConfigFile:      conf.Options.DefaultSchedulerConfigFile,
-		Logs:            logs.NewOptions(),
 	}
 
 	cc, err := framework.InitKubeSchedulerConfiguration(opts)
@@ -184,6 +180,8 @@ func runSimulator(s *options.ClusterCapacityConfig, kubeSchedulerConfig *schedco
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO sync with metrics server, store in local cache that serves as loadCache.
 
 	err = cc.Run()
 	if err != nil {

@@ -131,7 +131,7 @@ func (s *ClusterCapacityConfig) ParseAPISpec(schedulerName string) error {
 		return fmt.Errorf("unable to convert to internal version: %#v", err)
 
 	}
-	if errs := validation.ValidatePodCreate(internalPod, validation.PodValidationOptions{}); len(errs) > 0 {
+	if errs := validation.ValidatePodCreate(internalPod); len(errs) > 0 {
 		var errStrs []string
 		for _, err := range errs {
 			errStrs = append(errStrs, fmt.Sprintf("%v: %v", err.Type, err.Field))
