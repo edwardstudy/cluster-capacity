@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
-	coreinformers "k8s.io/client-go/informers/core/v1"
 	externalclientset "k8s.io/client-go/kubernetes"
 	fakeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -36,6 +35,7 @@ import (
 	schedconfig "k8s.io/kubernetes/cmd/kube-scheduler/app/config"
 	schedoptions "k8s.io/kubernetes/cmd/kube-scheduler/app/options"
 	"k8s.io/kubernetes/pkg/scheduler"
+	schedulerconfig "k8s.io/kubernetes/pkg/scheduler/apis/config"
 	framework "k8s.io/kubernetes/pkg/scheduler/framework/v1alpha1"
 
 	uuid "github.com/satori/go.uuid"
@@ -52,7 +52,6 @@ type ClusterCapacity struct {
 
 	externalkubeclient externalclientset.Interface
 	informerFactory    informers.SharedInformerFactory
-	podInformer        coreinformers.PodInformer
 
 	// schedulers
 	schedulers           map[string]*scheduler.Scheduler
@@ -343,6 +342,15 @@ func (c *ClusterCapacity) createScheduler(schedulerName string, cc *schedconfig.
 			return c.NewBindPlugin(schedulerName, configuration, f)
 		},
 	}
+	plugins := &schedulerconfig.Plugins{
+		Bind: &schedulerconfig.PluginSet{
+			Enabled: []schedulerconfig.Plugin{
+				{
+					Name: "ClusterCapacityBinder",
+				},
+			},
+		},
+	}
 
 	c.informerFactory.Core().V1().Pods().Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
@@ -370,9 +378,10 @@ func (c *ClusterCapacity) createScheduler(schedulerName string, cc *schedconfig.
 	return scheduler.New(
 		c.externalkubeclient,
 		c.informerFactory,
-		c.podInformer,
+		c.informerFactory.Core().V1().Pods(),
 		cc.Broadcaster.NewRecorder(scheme.Scheme, c.defaultSchedulerName),
 		c.schedulerCh,
+		scheduler.WithFrameworkPlugins(plugins),
 		scheduler.WithAlgorithmSource(cc.ComponentConfig.AlgorithmSource),
 		scheduler.WithPercentageOfNodesToScore(cc.ComponentConfig.PercentageOfNodesToScore),
 		scheduler.WithFrameworkOutOfTreeRegistry(outOfTreeRegistry),
@@ -399,7 +408,6 @@ func (c *ClusterCapacity) createScheduler(schedulerName string, cc *schedconfig.
 func New(kubeSchedulerConfig *schedconfig.CompletedConfig, simulatedPod *v1.Pod, maxPods int) (*ClusterCapacity, error) {
 	client := fakeclientset.NewSimpleClientset()
 	sharedInformerFactory := informers.NewSharedInformerFactory(client, 0)
-	podInformer := scheduler.NewPodInformer(client, 0)
 
 	kubeSchedulerConfig.Client = client
 
@@ -411,7 +419,6 @@ func New(kubeSchedulerConfig *schedconfig.CompletedConfig, simulatedPod *v1.Pod,
 		maxSimulated:       maxPods,
 		stop:               make(chan struct{}),
 		informerFactory:    sharedInformerFactory,
-		podInformer:        podInformer,
 		informerStopCh:     make(chan struct{}),
 		schedulerCh:        make(chan struct{}),
 	}

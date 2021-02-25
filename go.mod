@@ -17,7 +17,6 @@ require (
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/lithammer/dedent v1.1.0
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/pierrec/lz4 v2.0.5+incompatible // indirect
 	github.com/prometheus/common v0.11.1 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cobra v1.0.0
