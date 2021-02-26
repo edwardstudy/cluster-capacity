@@ -1,3 +1,7 @@
+## Notice
+
+It's an out of tree from https://github.com/kubernetes-sigs/cluster-capacity. It focuses on practise and proof on limited context(cluster-version, dependencies).
+
 # Cluster capacity analysis framework
 [![Build Status](https://travis-ci.org/kubernetes-sigs/cluster-capacity.svg?branch=master)](https://travis-ci.org/kubernetes-sigs/cluster-capacity)
 
