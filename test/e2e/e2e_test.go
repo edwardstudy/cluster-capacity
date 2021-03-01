@@ -180,7 +180,7 @@ func TestLimitReached(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	if err := cc.SyncWithClient(clientSet); err != nil {
+	if err := cc.SyncResources(clientSet, false); err != nil {
 		t.Fatalf("Unable to sync resources: %v", err)
 	}
 	if err := cc.Run(); err != nil {

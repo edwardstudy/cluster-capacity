@@ -39,6 +39,7 @@ import (
 	utilpointer "k8s.io/utils/pointer"
 
 	"sigs.k8s.io/cluster-capacity/cmd/cluster-capacity/app/options"
+	"sigs.k8s.io/cluster-capacity/pkg/cache"
 	"sigs.k8s.io/cluster-capacity/pkg/framework"
 	"sigs.k8s.io/cluster-capacity/pkg/utils"
 )
@@ -155,9 +156,13 @@ func Run(opt *options.ClusterCapacityOptions) error {
 	}
 
 	conf.KubeClient, err = clientset.NewForConfig(cfg)
-
 	if err != nil {
 		return err
+	}
+
+	conf.Cache, err = cache.NewDiskCache(opt.CacheDir)
+	if err != nil {
+		return fmt.Errorf("unable to create disk cache: %v", err)
 	}
 
 	report, err := runSimulator(conf, cc)
@@ -171,12 +176,12 @@ func Run(opt *options.ClusterCapacityOptions) error {
 }
 
 func runSimulator(s *options.ClusterCapacityConfig, kubeSchedulerConfig *schedconfig.CompletedConfig) (*framework.ClusterCapacityReview, error) {
-	cc, err := framework.New(kubeSchedulerConfig, s.Pod, s.Options.MaxLimit)
+	cc, err := framework.New(kubeSchedulerConfig, s.Pod, s.Options.MaxLimit, s.Cache)
 	if err != nil {
 		return nil, err
 	}
 
-	err = cc.SyncWithClient(s.KubeClient)
+	err = cc.SyncResources(s.KubeClient, s.Options.Refresh)
 	if err != nil {
 		return nil, err
 	}

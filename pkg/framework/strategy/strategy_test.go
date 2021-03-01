@@ -17,7 +17,6 @@ limitations under the License.
 package strategy
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	goruntime "runtime"
@@ -155,7 +154,7 @@ func TestAddPodStrategy(t *testing.T) {
 	}
 
 	// 4. check both the update node and the pod is stored back into the resource store
-	foundPod, err := client.CoreV1().Pods(scheduledPod.Namespace).Get(context.TODO(), scheduledPod.Name, metav1.GetOptions{})
+	foundPod, err := client.CoreV1().Pods(scheduledPod.Namespace).Get(scheduledPod.Name, metav1.GetOptions{})
 	if err != nil {
 		t.Errorf("Unexpected error when retrieving scheduled pod: %v", err)
 	}
@@ -169,7 +168,7 @@ func TestAddPodStrategy(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: testStrategyNode},
 	}
 
-	foundNode, err := client.CoreV1().Nodes().Get(context.TODO(), node.Name, metav1.GetOptions{})
+	foundNode, err := client.CoreV1().Nodes().Get(node.Name, metav1.GetOptions{})
 	if err != nil {
 		t.Errorf("Unexpected error when retrieving scheduled node: %v", err)
 	}

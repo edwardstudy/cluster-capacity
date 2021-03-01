@@ -16,6 +16,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/lithammer/dedent v1.1.0
+	github.com/maxbrunsfeld/counterfeiter/v6 v6.3.0
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/prometheus/common v0.11.1 // indirect
 	github.com/satori/go.uuid v1.2.0

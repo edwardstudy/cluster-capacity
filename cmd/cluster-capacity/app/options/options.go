@@ -32,11 +32,14 @@ import (
 	api "k8s.io/kubernetes/pkg/apis/core"
 	apiv1 "k8s.io/kubernetes/pkg/apis/core/v1"
 	"k8s.io/kubernetes/pkg/apis/core/validation"
+
+	"sigs.k8s.io/cluster-capacity/pkg/cache"
 )
 
 type ClusterCapacityConfig struct {
 	Pod        *v1.Pod
 	KubeClient clientset.Interface
+	Cache      cache.Cache
 	Options    *ClusterCapacityOptions
 }
 
@@ -47,6 +50,8 @@ type ClusterCapacityOptions struct {
 	Verbose                    bool
 	PodSpecFile                string
 	OutputFormat               string
+	CacheDir                   string
+	Refresh                    bool
 }
 
 func NewClusterCapacityConfig(opt *ClusterCapacityOptions) *ClusterCapacityConfig {
@@ -60,9 +65,12 @@ func NewClusterCapacityOptions() *ClusterCapacityOptions {
 }
 
 func (s *ClusterCapacityOptions) AddFlags(fs *pflag.FlagSet) {
+	pwd, _ := os.Getwd()
 	fs.StringVar(&s.Kubeconfig, "kubeconfig", s.Kubeconfig, "Path to the kubeconfig file to use for the analysis.")
 	fs.StringVar(&s.PodSpecFile, "podspec", s.PodSpecFile, "Path to JSON or YAML file containing pod definition.")
 	fs.IntVar(&s.MaxLimit, "max-limit", 0, "Number of instances of pod to be scheduled after which analysis stops. By default unlimited.")
+	fs.StringVar(&s.CacheDir, "cache-dir", pwd, "Path to the local cache.")
+	fs.BoolVar(&s.Refresh, "refresh", s.Refresh, "Indicate whether to refresh local cache from API Server.")
 
 	//TODO(jchaloup): uncomment this line once the multi-schedulers are fully implemented
 	//fs.StringArrayVar(&s.SchedulerConfigFile, "config", s.SchedulerConfigFile, "Paths to files containing scheduler configuration in JSON or YAML format")

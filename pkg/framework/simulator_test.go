@@ -28,8 +28,11 @@ import (
 	fakeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/component-base/version"
 	kubescheduleroptions "k8s.io/kubernetes/cmd/kube-scheduler/app/options"
+	_ "k8s.io/kubernetes/pkg/scheduler/algorithmprovider/defaults"
 	kubeschedulerconfig "k8s.io/kubernetes/pkg/scheduler/apis/config"
 	"k8s.io/utils/pointer"
+
+	"sigs.k8s.io/cluster-capacity/pkg/cache/cachefakes"
 )
 
 // func init() {
@@ -225,24 +228,20 @@ func TestPrediction(t *testing.T) {
 
 			// inject scheduler config config
 			opts.ComponentConfig = kubeschedulerconfig.KubeSchedulerConfiguration{
+				SchedulerName: v1.DefaultSchedulerName,
 				AlgorithmSource: kubeschedulerconfig.SchedulerAlgorithmSource{
 					Provider: pointer.StringPtr("DefaultProvider"),
 				},
-				Profiles: []kubeschedulerconfig.KubeSchedulerProfile{
-					{
-						SchedulerName: v1.DefaultSchedulerName,
-						Plugins: &kubeschedulerconfig.Plugins{
-							Bind: &kubeschedulerconfig.PluginSet{
-								Enabled: []kubeschedulerconfig.Plugin{
-									{
-										Name: "ClusterCapacityBinder",
-									},
-								},
-								Disabled: []kubeschedulerconfig.Plugin{
-									{
-										Name: "DefaultBinder",
-									},
-								},
+				Plugins: &kubeschedulerconfig.Plugins{
+					Bind: &kubeschedulerconfig.PluginSet{
+						Enabled: []kubeschedulerconfig.Plugin{
+							{
+								Name: "ClusterCapacityBinder",
+							},
+						},
+						Disabled: []kubeschedulerconfig.Plugin{
+							{
+								Name: "DefaultBinder",
 							},
 						},
 					},
@@ -254,17 +253,27 @@ func TestPrediction(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			fakeCache := &cachefakes.FakeCache{}
+			fakeCache.GetStub = func(string) ([]byte, error) {
+				return []byte("{}"), nil
+			}
+
+			fakeCache.SetStub = func(string, []byte) error {
+				return nil
+			}
+
 			cc, err := New(kubeSchedulerConfig,
 				simulatedPod,
 				test.limit,
+				fakeCache,
 			)
 
 			if err != nil {
-				t.Errorf("Unexpected error: %v", err)
+				t.Fatalf("Unexpected error: %v", err)
 			}
 
 			// 3. run predictor
-			if err := cc.SyncWithClient(client); err != nil {
+			if err := cc.SyncResources(client, false); err != nil {
 				t.Errorf("Unable to sync resources: %v", err)
 			}
 			if err := cc.Run(); err != nil {
