@@ -169,6 +169,9 @@ func Run(opt *options.ClusterCapacityOptions) error {
 	if err != nil {
 		return err
 	}
+
+	//nodes, _ := cc.Client.CoreV1().Nodes().List(metav1.ListOptions{})
+	//fmt.Printf("nodes: %v", nodes)
 	if err := framework.ClusterCapacityReviewPrint(report, conf.Options.Verbose, conf.Options.OutputFormat); err != nil {
 		return fmt.Errorf("Error while printing: %v", err)
 	}

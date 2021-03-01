@@ -411,6 +411,21 @@ func (c *ClusterCapacity) Run() error {
 	<-c.stop
 	cancel()
 	close(c.stop)
+
+	for _, scheduler := range c.schedulers {
+		c := scheduler.Cache()
+		s := c.Snapshot()
+		for _, ni := range s.Nodes {
+			ar := ni.AllocatableResource()
+			rr := ni.RequestedResource()
+
+			fmt.Printf("NodeInfo: %s\n", ni.String())
+			fmt.Printf("Node %s allocatable resources:\n", ni.Node().Name)
+			fmt.Printf("CPU: %d, Memory: %d, EphemeralStorage: %d\n", ar.MilliCPU, ar.Memory, ar.EphemeralStorage)
+			fmt.Printf("Node %s requested resources:\n", ni.Node().Name)
+			fmt.Printf("CPU: %d, Memory: %d, EphemeralStorage: %d\n\n", rr.MilliCPU, rr.Memory, rr.EphemeralStorage)
+		}
+	}
 	return nil
 }
 
